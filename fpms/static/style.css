@@ -234,7 +234,7 @@ h1, h2, h3, h4, h5, h6 {
 /* KPI Cards */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
   margin-bottom: 2rem;
 }
@@ -242,6 +242,7 @@ h1, h2, h3, h4, h5, h6 {
 .kpi-grid .card {
   position: relative;
   overflow: hidden;
+  min-width: 0;
 }
 
 .kpi-grid .card::after {
@@ -268,10 +269,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .kpi-value {
-  font-size: 1.85rem;
+  font-size: clamp(1.1rem, 2vw, 1.75rem);
   font-weight: 700;
   font-family: var(--font-mono);
   letter-spacing: -0.02em;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* === TABLES === */

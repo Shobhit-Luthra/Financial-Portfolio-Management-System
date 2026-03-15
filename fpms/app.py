@@ -459,6 +459,90 @@ def execute_trade(current_user_id):
     
     return jsonify({'message': 'Invalid action. Use buy or sell.'}), 400
 
+# === CSV IMPORT ===
+@app.route('/import/portfolio', methods=['POST'])
+@token_required
+def import_portfolio(current_user_id):
+    import csv, io
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'message': 'No file uploaded.'}), 400
+    
+    filename = f.filename.lower()
+    if not filename.endswith('.csv'):
+        return jsonify({'message': 'Only CSV files are supported. Please upload a .csv file.'}), 400
+
+    try:
+        content = f.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+        
+        required = {'symbol', 'quantity', 'price'}
+        if not required.issubset({h.strip().lower() for h in (reader.fieldnames or [])}):
+            return jsonify({'message': f'CSV must have columns: symbol, quantity, price. Optional: name, type, date'}), 400
+        
+        imported = 0
+        errors = []
+        
+        for i, raw_row in enumerate(reader, start=2):
+            row = {k.strip().lower(): v.strip() for k, v in raw_row.items() if k}
+            symbol = row.get('symbol', '').upper()
+            name = row.get('name', symbol)
+            asset_type = row.get('type', 'stock').lower()
+            if asset_type not in ('stock', 'bond', 'mutual_fund', 'other'):
+                asset_type = 'stock'
+            
+            try:
+                qty = float(row.get('quantity', 0))
+                price = float(row.get('price', 0))
+            except ValueError:
+                errors.append(f'Row {i}: invalid number for quantity/price')
+                continue
+            
+            if qty <= 0 or price <= 0 or not symbol:
+                errors.append(f'Row {i}: symbol, quantity and price must be positive')
+                continue
+            
+            dt = row.get('date', datetime.now().strftime('%Y-%m-%d'))
+            
+            # Use same merge logic as /trade
+            existing = db.execute_query(
+                "SELECT asset_id, quantity, avg_buy_price FROM assets WHERE user_id = %s AND symbol = %s",
+                (current_user_id, symbol), fetch=True, fetchall=False
+            )
+            
+            if existing:
+                old_qty = float(existing['quantity'])
+                old_avg = float(existing['avg_buy_price'])
+                new_qty = old_qty + qty
+                new_avg = ((old_avg * old_qty) + (price * qty)) / new_qty
+                db.execute_query(
+                    "UPDATE assets SET quantity = %s, avg_buy_price = %s, current_price = %s WHERE asset_id = %s",
+                    (round(new_qty, 4), round(new_avg, 4), round(price, 4), existing['asset_id'])
+                )
+                asset_id = existing['asset_id']
+            else:
+                db.execute_query(
+                    "INSERT INTO assets (user_id, symbol, name, type, quantity, avg_buy_price, current_price) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    (current_user_id, symbol, name, asset_type, round(qty, 4), round(price, 4), round(price, 4))
+                )
+                result = db.execute_query("SELECT LAST_INSERT_ID() as id", fetch=True, fetchall=False)
+                asset_id = result['id']
+            
+            total = round(qty * price, 2)
+            db.execute_query(
+                "INSERT INTO transactions (user_id, asset_id, type, quantity, price_per_unit, total_amount, transaction_date, notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                (current_user_id, asset_id, 'buy', round(qty, 4), round(price, 4), total, dt, 'CSV Import')
+            )
+            imported += 1
+        
+        msg = f'Successfully imported {imported} holdings.'
+        if errors:
+            msg += f' {len(errors)} rows had errors: ' + '; '.join(errors[:5])
+        return jsonify({'message': msg, 'imported': imported, 'errors': errors}), 201
+    
+    except Exception as e:
+        return jsonify({'message': f'Failed to parse CSV: {str(e)}'}), 400
+
 # === REPORTS API (REAL DATA) ===
 
 @app.route('/reports/generate', methods=['GET'])

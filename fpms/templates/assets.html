@@ -5,7 +5,10 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">My Portfolio</h1>
-    <div style="display: flex; gap: 1rem;">
+    <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-outline" onclick="document.getElementById('importModal').style.display='flex'">
+            <i class="ph ph-upload-simple"></i> Import CSV
+        </button>
         <button class="btn btn-primary" onclick="openTradeModal('buy')">
             <i class="ph ph-arrow-circle-up"></i> Buy
         </button>
@@ -16,7 +19,7 @@
 </div>
 
 <!-- Summary -->
-<div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+<div class="kpi-grid">
     <div class="card">
         <h3 class="kpi-title">Holdings</h3>
         <div class="kpi-value" id="kpi-holdings">0</div>
@@ -35,17 +38,79 @@
     </div>
 </div>
 
+<!-- Filter & Search Bar -->
+<div class="card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px; position: relative;">
+            <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+            <input type="text" id="search-input" class="form-control" placeholder="Search by symbol or name..." oninput="applyFiltersAndSort()" style="padding-left: 2.25rem; margin-bottom: 0;">
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <select id="filter-type" class="form-control" onchange="applyFiltersAndSort()" style="width: auto; min-width: 140px; margin-bottom: 0;">
+                <option value="all">All Types</option>
+                <option value="stock">Stocks</option>
+                <option value="bond">Bonds</option>
+                <option value="mutual_fund">Mutual Funds</option>
+                <option value="other">Other</option>
+            </select>
+            <select id="filter-pnl" class="form-control" onchange="applyFiltersAndSort()" style="width: auto; min-width: 130px; margin-bottom: 0;">
+                <option value="all">All P&L</option>
+                <option value="profit">In Profit</option>
+                <option value="loss">In Loss</option>
+            </select>
+            <span class="text-muted" style="font-size: 0.8rem; white-space: nowrap;" id="filter-count">0 holdings</span>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div style="overflow-x: auto;">
         <table id="assets-table">
             <thead>
                 <tr>
-                    <th>Symbol</th><th>Name</th><th>Type</th><th>Qty</th>
-                    <th>Avg Buy</th><th>CMP</th><th>P&L</th><th>Return</th><th>Quick Trade</th>
+                    <th style="cursor:pointer;" onclick="sortTable('symbol')">Symbol <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('name')">Name <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('type')">Type <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('quantity')">Qty <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('avg_buy_price')">Avg Buy <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('current_price')">CMP <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('pnl')">P&L <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable('return')">Return <i class="ph ph-caret-up-down" style="opacity:0.4;"></i></th>
+                    <th>Quick Trade</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3><i class="ph ph-upload-simple"></i> Import Portfolio from CSV</h3>
+            <button class="modal-close" onclick="document.getElementById('importModal').style.display='none'"><i class="ph ph-x"></i></button>
+        </div>
+        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">Upload a CSV file with your holdings. Required columns: <strong>symbol, quantity, price</strong>. Optional: name, type, date.</p>
+        
+        <div style="background: rgba(14,164,122,0.06); border: 1px dashed rgba(14,164,122,0.3); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem; cursor: pointer;" id="drop-zone" onclick="document.getElementById('csv-file').click()">
+            <i class="ph ph-file-csv" style="font-size: 2rem; color: var(--accent-color); display: block; margin-bottom: 0.5rem;"></i>
+            <span class="text-muted" style="font-size: 0.85rem;" id="drop-label">Click to browse or drag & drop a CSV file</span>
+            <input type="file" id="csv-file" accept=".csv" style="display: none;" onchange="handleFileSelect(this)">
+        </div>
+
+        <button class="btn btn-outline" style="width: 100%; margin-bottom: 1rem; font-size: 0.85rem;" onclick="downloadTemplate()">
+            <i class="ph ph-download-simple"></i> Download CSV Template
+        </button>
+
+        <div id="import-msg" style="display:none; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('importModal').style.display='none'">Cancel</button>
+            <button class="btn btn-primary" style="flex:1;" id="import-btn" onclick="uploadCSV()" disabled>
+                <i class="ph ph-upload"></i> Import
+            </button>
+        </div>
     </div>
 </div>
 
@@ -121,6 +186,9 @@
 <script>
     const fmt = getCurrencyFormatter();
     let assetsData = [];
+    let filteredData = [];
+    let sortCol = null;
+    let sortDir = 'asc';
 
     async function loadAssets() {
         try {
@@ -128,7 +196,7 @@
             if (res.status === 401) return window.location.href = '/';
             const data = await res.json();
             assetsData = data.assets || [];
-            renderTable();
+            applyFiltersAndSort();
             updateSummaryKPIs();
         } catch (e) { console.error(e); }
     }
@@ -148,14 +216,69 @@
         pnlEl.className = `kpi-value text-${pnl >= 0 ? 'gain' : 'loss'}`;
     }
 
+    // === FILTERING & SORTING ===
+    function applyFiltersAndSort() {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        const typeFilter = document.getElementById('filter-type').value;
+        const pnlFilter = document.getElementById('filter-pnl').value;
+
+        filteredData = assetsData.filter(a => {
+            if (search && !a.symbol.toLowerCase().includes(search) && !a.name.toLowerCase().includes(search)) return false;
+            if (typeFilter !== 'all' && a.type !== typeFilter) return false;
+            if (pnlFilter !== 'all') {
+                const pnl = (a.quantity * a.current_price) - (a.quantity * a.avg_buy_price);
+                if (pnlFilter === 'profit' && pnl < 0) return false;
+                if (pnlFilter === 'loss' && pnl >= 0) return false;
+            }
+            return true;
+        });
+
+        if (sortCol) {
+            filteredData.sort((a, b) => {
+                let va, vb;
+                if (sortCol === 'pnl') {
+                    va = (a.quantity * a.current_price) - (a.quantity * a.avg_buy_price);
+                    vb = (b.quantity * b.current_price) - (b.quantity * b.avg_buy_price);
+                } else if (sortCol === 'return') {
+                    const invA = a.quantity * a.avg_buy_price;
+                    const invB = b.quantity * b.avg_buy_price;
+                    va = invA > 0 ? ((a.quantity * a.current_price - invA) / invA * 100) : 0;
+                    vb = invB > 0 ? ((b.quantity * b.current_price - invB) / invB * 100) : 0;
+                } else {
+                    va = a[sortCol]; vb = b[sortCol];
+                }
+                if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+                if (va < vb) return sortDir === 'asc' ? -1 : 1;
+                if (va > vb) return sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        document.getElementById('filter-count').textContent = `${filteredData.length} of ${assetsData.length} holdings`;
+        renderTable();
+    }
+
+    function sortTable(col) {
+        if (sortCol === col) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortCol = col;
+            sortDir = 'asc';
+        }
+        applyFiltersAndSort();
+    }
+
     function renderTable() {
         const tbody = document.querySelector('#assets-table tbody');
         tbody.innerHTML = '';
-        if (assetsData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No holdings yet. Click <strong>Buy</strong> to start trading.</td></tr>';
+        if (filteredData.length === 0) {
+            const msg = assetsData.length === 0 
+                ? 'No holdings yet. Click <strong>Buy</strong> or <strong>Import CSV</strong> to get started.'
+                : 'No holdings match your filters.';
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">${msg}</td></tr>`;
             return;
         }
-        assetsData.forEach(a => {
+        filteredData.forEach(a => {
             const inv = a.quantity * a.avg_buy_price;
             const val = a.quantity * a.current_price;
             const pnl = val - inv;
@@ -185,7 +308,78 @@
         });
     }
 
-    // Trade Modal
+    // === CSV IMPORT ===
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (file) {
+            document.getElementById('drop-label').textContent = file.name;
+            document.getElementById('import-btn').disabled = false;
+        }
+    }
+
+    // Drag & drop support
+    const dropZone = document.getElementById('drop-zone');
+    if (dropZone) {
+        ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor = 'var(--accent-color)'; }));
+        ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor = 'rgba(14,164,122,0.3)'; }));
+        dropZone.addEventListener('drop', ev => {
+            const file = ev.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                document.getElementById('csv-file').files = ev.dataTransfer.files;
+                document.getElementById('drop-label').textContent = file.name;
+                document.getElementById('import-btn').disabled = false;
+            }
+        });
+    }
+
+    function downloadTemplate() {
+        const csv = "symbol,name,type,quantity,price,date\nAAPL,Apple Inc.,stock,10,150.00,2024-01-15\nGOOGL,Alphabet Inc.,stock,5,140.50,2024-02-01\nVBMFX,Vanguard Bond Fund,bond,20,10.25,2024-03-10\n";
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'fpms_import_template.csv';
+        a.click(); URL.revokeObjectURL(url);
+    }
+
+    async function uploadCSV() {
+        const fileInput = document.getElementById('csv-file');
+        const msgEl = document.getElementById('import-msg');
+        if (!fileInput.files[0]) return;
+
+        const fd = new FormData();
+        fd.append('file', fileInput.files[0]);
+        
+        document.getElementById('import-btn').disabled = true;
+        document.getElementById('import-btn').textContent = 'Importing...';
+
+        try {
+            const res = await fetch('/import/portfolio', { method: 'POST', body: fd });
+            const data = await res.json();
+            msgEl.textContent = data.message;
+            msgEl.style.display = 'block';
+            if (res.ok) {
+                msgEl.style.background = 'rgba(34,197,94,0.12)';
+                msgEl.style.color = 'var(--gain-color)';
+                setTimeout(() => {
+                    document.getElementById('importModal').style.display = 'none';
+                    msgEl.style.display = 'none';
+                    loadAssets();
+                }, 2000);
+            } else {
+                msgEl.style.background = 'rgba(244,63,94,0.12)';
+                msgEl.style.color = 'var(--loss-color)';
+            }
+        } catch (e) {
+            msgEl.textContent = 'Network error.';
+            msgEl.style.display = 'block';
+            msgEl.style.background = 'rgba(244,63,94,0.12)';
+            msgEl.style.color = 'var(--loss-color)';
+        }
+        document.getElementById('import-btn').disabled = false;
+        document.getElementById('import-btn').innerHTML = '<i class="ph ph-upload"></i> Import';
+    }
+
+    // === TRADE MODAL ===
     const tradeModal = document.getElementById('tradeModal');
 
     function openTradeModal(action) {
