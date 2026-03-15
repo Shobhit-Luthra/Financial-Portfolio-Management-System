@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}- Reports{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Financial Reports</h1>
+    <button class="btn btn-outline" onclick="exportReportCSV()">
+        <i class="ph ph-download-simple"></i> Export as CSV
+    </button>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 1.5rem;">Report Configuration</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Report Type</label>
+            <select class="form-control" id="report-type">
+                <option value="summary">Portfolio Summary</option>
+                <option value="tax">Tax Harvesting</option>
+                <option value="dividend">Dividend Report</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="generateReport()">
+            <i class="ph ph-file-search"></i> Generate Report
+        </button>
+    </div>
+</div>
+
+<!-- Report Output Area -->
+<div class="card" id="report-output" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 id="report-title">Report</h3>
+        <span class="badge badge-stock" id="report-currency-badge">USD</span>
+    </div>
+    
+    <!-- Summary KPIs -->
+    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Total Invested</h3>
+            <div class="kpi-value" id="rpt-invested">--</div>
+        </div>
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Current Value</h3>
+            <div class="kpi-value" id="rpt-value">--</div>
+        </div>
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Total P&L</h3>
+            <div class="kpi-value" id="rpt-pnl">--</div>
+        </div>
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Capital Gains</h3>
+            <div class="kpi-value text-gain" id="rpt-gains">--</div>
+        </div>
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Capital Losses</h3>
+            <div class="kpi-value text-loss" id="rpt-losses">--</div>
+        </div>
+        <div class="card" style="background: var(--bg-color);">
+            <h3 class="kpi-title">Net Taxable</h3>
+            <div class="kpi-value text-warning" id="rpt-net">--</div>
+        </div>
+    </div>
+
+    <!-- Asset Breakdown Table -->
+    <h3 style="margin-bottom: 1rem;">Asset Breakdown</h3>
+    <div style="overflow-x: auto;">
+        <table id="report-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th><th>Name</th><th>Type</th>
+                    <th>Invested</th><th>Current Value</th><th>P&L</th><th>Return %</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Transaction Summary -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem;">
+        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
+            <span class="text-muted">Total Buys</span>
+            <div class="text-gain" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-buys">--</div>
+        </div>
+        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
+            <span class="text-muted">Total Sells</span>
+            <div class="text-loss" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-sells">--</div>
+        </div>
+        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
+            <span class="text-muted">Dividends Earned</span>
+            <div class="text-warning" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-divs">--</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fmt = getCurrencyFormatter();
+    let reportData = null;
+
+    async function generateReport() {
+        const type = document.getElementById('report-type').value;
+        try {
+            const res = await fetch(`/reports/generate?type=${type}`);
+            reportData = await res.json();
+            renderReport(type);
+        } catch(e) { console.error(e); alert("Failed to generate report."); }
+    }
+
+    function renderReport(type) {
+        if (!reportData) return;
+        const titleMap = {
+            'summary': 'Portfolio Summary Report',
+            'tax': 'Tax Harvesting Report',
+            'dividend': 'Dividend Analysis Report'
+        };
+        document.getElementById('report-title').textContent = titleMap[type] || 'Report';
+        document.getElementById('report-currency-badge').textContent = reportData.currency || 'USD';
+        document.getElementById('report-output').style.display = 'block';
+
+        document.getElementById('rpt-invested').textContent = fmt.format(reportData.total_invested);
+        document.getElementById('rpt-value').textContent = fmt.format(reportData.total_value);
+        
+        const pnlEl = document.getElementById('rpt-pnl');
+        pnlEl.textContent = `${reportData.total_pnl >= 0 ? '+' : ''}${fmt.format(reportData.total_pnl)}`;
+        pnlEl.className = `kpi-value text-${reportData.total_pnl >= 0 ? 'gain' : 'loss'}`;
+        
+        document.getElementById('rpt-gains').textContent = `+${fmt.format(reportData.capital_gains)}`;
+        document.getElementById('rpt-losses').textContent = fmt.format(reportData.capital_losses);
+        document.getElementById('rpt-net').textContent = fmt.format(reportData.net_taxable);
+        document.getElementById('rpt-buys').textContent = fmt.format(reportData.total_buys);
+        document.getElementById('rpt-sells').textContent = fmt.format(reportData.total_sells);
+        document.getElementById('rpt-divs').textContent = fmt.format(reportData.total_dividends);
+
+        // Asset table
+        const tbody = document.querySelector('#report-table tbody');
+        tbody.innerHTML = '';
+        (reportData.asset_details || []).forEach(a => {
+            const pnlClass = a.pnl >= 0 ? 'text-gain' : 'text-loss';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="font-weight: bold;">${a.symbol}</td>
+                <td>${a.name}</td>
+                <td>${a.type}</td>
+                <td>${fmt.format(a.invested)}</td>
+                <td>${fmt.format(a.current_value)}</td>
+                <td class="${pnlClass}">${a.pnl >= 0 ? '+' : ''}${fmt.format(a.pnl)}</td>
+                <td class="${pnlClass}">${a.return_pct >= 0 ? '+' : ''}${a.return_pct}%</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function exportReportCSV() {
+        if (!reportData || !reportData.asset_details) return alert("Generate a report first.");
+        const headers = ["Symbol", "Name", "Type", "Invested", "Current Value", "P&L", "Return %"];
+        const rows = reportData.asset_details.map(a => [a.symbol, a.name, a.type, a.invested, a.current_value, a.pnl, a.return_pct]);
+        let csv = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csv));
+        link.setAttribute("download", `fpms_report_${reportData.report_type}.csv`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+</script>
+{% endblock %}

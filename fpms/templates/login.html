@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPMS - Login / Register</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Load phosphor icons for premium look -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="auth-wrapper">
+
+    <div class="card auth-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                <i class="ph ph-chart-polar accent" style="color: var(--accent-color);"></i> FPMS
+            </div>
+            <p class="text-muted" style="margin-top: 0.5rem;">Financial Portfolio Management System</p>
+        </div>
+
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</div>
+            <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</div>
+        </div>
+
+        <div id="alert-container" style="color: var(--loss-color); text-align: center; margin-bottom: 1rem; font-size: 0.875rem; display: none;"></div>
+
+        <!-- Login Form -->
+        <form id="form-login" onsubmit="handleAuth(event, 'login')">
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Sign In <i class="ph ph-arrow-right"></i>
+            </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="form-register" style="display: none;" onsubmit="handleAuth(event, 'register')">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="name" class="form-control" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Create Account <i class="ph ph-user-plus"></i>
+            </button>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script>
+        function switchTab(tab) {
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-register').classList.remove('active');
+            document.getElementById('form-login').style.display = 'none';
+            document.getElementById('form-register').style.display = 'none';
+            
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`form-${tab}`).style.display = 'block';
+            document.getElementById('alert-container').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

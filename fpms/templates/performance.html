@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}- Performance{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Performance Analysis</h1>
+</div>
+
+<div class="kpi-grid">
+    <div class="card">
+        <h3 class="kpi-title">Total Return</h3>
+        <div class="kpi-value" id="perf-return">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Beta</h3>
+        <div class="kpi-value" id="perf-beta">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Total Invested</h3>
+        <div class="kpi-value" id="perf-invested">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Current Value</h3>
+        <div class="kpi-value" id="perf-value">--</div>
+    </div>
+</div>
+
+<!-- Portfolio History Chart -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Portfolio Value Over Time</h3>
+        <select id="perfRange" class="form-control" style="width: auto; padding: 0.3rem;" onchange="loadPerfChart()">
+            <option value="1W">1 Week</option>
+            <option value="1M">1 Month</option>
+            <option value="3M" selected>3 Months</option>
+            <option value="1Y">1 Year</option>
+        </select>
+    </div>
+    <div class="chart-container" style="height: 400px;">
+        <canvas id="performanceChart"></canvas>
+    </div>
+</div>
+
+<!-- Best & Worst Performers -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Best Performers</h3>
+        <table>
+            <thead><tr><th>Symbol</th><th>Return</th><th>Value</th></tr></thead>
+            <tbody id="best-table"></tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Worst Performers</h3>
+        <table>
+            <thead><tr><th>Symbol</th><th>Return</th><th>Value</th></tr></thead>
+            <tbody id="worst-table"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fmt = getCurrencyFormatter();
+    const sym = getCurrencySymbol();
+    let perfChartInst = null;
+
+    async function loadPerformanceData() {
+        try {
+            const res = await fetch('/analytics/performance');
+            if (res.status === 401) return window.location.href = '/';
+            const data = await res.json();
+
+            const retEl = document.getElementById('perf-return');
+            retEl.textContent = `${data.total_return_pct >= 0 ? '+' : ''}${data.total_return_pct}%`;
+            retEl.className = `kpi-value text-${data.total_return_pct >= 0 ? 'gain' : 'loss'}`;
+            document.getElementById('perf-beta').textContent = data.beta.toFixed(2);
+            document.getElementById('perf-invested').textContent = fmt.format(data.total_invested);
+            document.getElementById('perf-value').textContent = fmt.format(data.total_value);
+
+            // Best performers table
+            const bestTb = document.getElementById('best-table');
+            bestTb.innerHTML = '';
+            (data.best_performers || []).forEach(p => {
+                bestTb.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${p.symbol}</td>
+                    <td class="text-gain">+${p.return_pct}%</td>
+                    <td>${fmt.format(p.value)}</td>
+                </tr>`;
+            });
+            if (!data.best_performers || data.best_performers.length === 0) {
+                bestTb.innerHTML = '<tr><td colspan="3" class="text-muted" style="text-align:center;">No data</td></tr>';
+            }
+
+            // Worst performers table
+            const worstTb = document.getElementById('worst-table');
+            worstTb.innerHTML = '';
+            (data.worst_performers || []).forEach(p => {
+                const cls = p.return_pct >= 0 ? 'text-gain' : 'text-loss';
+                worstTb.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${p.symbol}</td>
+                    <td class="${cls}">${p.return_pct >= 0 ? '+' : ''}${p.return_pct}%</td>
+                    <td>${fmt.format(p.value)}</td>
+                </tr>`;
+            });
+            if (!data.worst_performers || data.worst_performers.length === 0) {
+                worstTb.innerHTML = '<tr><td colspan="3" class="text-muted" style="text-align:center;">No data</td></tr>';
+            }
+
+            loadPerfChart();
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadPerfChart() {
+        const range = document.getElementById('perfRange').value;
+        try {
+            const res = await fetch(`/portfolio/history?range=${range}`);
+            const data = await res.json();
+            if (!data || data.length === 0) return;
+
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            if (perfChartInst) perfChartInst.destroy();
+
+            Chart.defaults.color = '#9499b0';
+            Chart.defaults.font.family = "'DM Mono', monospace";
+
+            perfChartInst = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => new Date(d.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})),
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: data.map(d => d.value),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2, pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#141720', borderColor: '#2e3347', borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#2e3347', borderDash: [5, 5] }, ticks: { callback: v => sym + v.toLocaleString() } }
+                    }
+                }
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadPerformanceData);
+</script>
+{% endblock %}

@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}- Transactions{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Transaction History</h1>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <span class="text-muted" style="font-size: 0.85rem;"><i class="ph ph-info"></i> Transactions are auto-recorded when you Buy/Sell from Portfolio.</span>
+        <button class="btn btn-outline" onclick="exportCSV()">
+            <i class="ph ph-download-simple"></i> Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="card">
+        <h3 class="kpi-title">Total Buys</h3>
+        <div class="kpi-value text-gain" id="total-buys">0</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Total Sells</h3>
+        <div class="kpi-value text-loss" id="total-sells">0</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Transaction Count</h3>
+        <div class="kpi-value" id="tx-count">0</div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="overflow-x: auto;">
+        <table id="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Asset</th>
+                    <th>Qty</th>
+                    <th>Price/unit</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- New Transaction Modal (asset is now a dropdown linked to real assets) -->
+<div class="modal-overlay" id="txModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>New Transaction</h3>
+            <button class="modal-close" onclick="closeModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <form id="tx-form" onsubmit="saveTransaction(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Asset</label>
+                    <select id="tx-asset" name="asset_id" class="form-control" required>
+                        <option value="">-- Select an Asset --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="tx-type" name="type" class="form-control" required>
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                        <option value="SIP">SIP</option>
+                        <option value="DIVIDEND">DIVIDEND</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" id="tx-date" name="date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" id="tx-qty" name="quantity" class="form-control" step="any" required oninput="calcTotal()">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Price / unit</label>
+                    <input type="number" id="tx-price" name="price_per_unit" class="form-control" step="any" required oninput="calcTotal()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total Value</label>
+                    <input type="number" id="tx-total" name="total" class="form-control" step="any" readonly style="background-color: var(--bg-color);">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Notes (Optional)</label>
+                <input type="text" id="tx-notes" name="notes" class="form-control">
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Save Transaction</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fmt = getCurrencyFormatter();
+    let transactionsData = [];
+
+    async function loadTransactions() {
+        try {
+            const res = await fetch('/transactions');
+            if (res.status === 401) return window.location.href = '/';
+            const data = await res.json();
+            transactionsData = data.transactions || [];
+            renderTable();
+            updateKPIs();
+        } catch (e) { console.error(e); }
+    }
+
+    function updateKPIs() {
+        let buys = 0, sells = 0;
+        transactionsData.forEach(tx => {
+            const total = parseFloat(tx.total);
+            if (tx.type === 'BUY' || tx.type === 'SIP') buys += total;
+            else if (tx.type === 'SELL') sells += total;
+        });
+        document.getElementById('total-buys').textContent = fmt.format(buys);
+        document.getElementById('total-sells').textContent = fmt.format(sells);
+        document.getElementById('tx-count').textContent = transactionsData.length;
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector('#transactions-table tbody');
+        tbody.innerHTML = '';
+        if (transactionsData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No transactions found. Add assets first, then record transactions.</td></tr>';
+            return;
+        }
+        transactionsData.forEach(tx => {
+            let typeColor = 'var(--accent-color)';
+            if (tx.type === 'BUY' || tx.type === 'SIP') typeColor = 'var(--gain-color)';
+            else if (tx.type === 'SELL') typeColor = 'var(--loss-color)';
+            else if (tx.type === 'DIVIDEND') typeColor = 'var(--warning-color)';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date(tx.date).toLocaleDateString()}</td>
+                <td><span style="color: ${typeColor}; font-weight: 600; font-family: var(--font-body);">${tx.type}</span></td>
+                <td style="font-weight: bold; font-family: var(--font-body);">${tx.asset_symbol}</td>
+                <td>${tx.quantity}</td>
+                <td>${fmt.format(tx.price_per_unit)}</td>
+                <td>${fmt.format(tx.total)}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Load assets into dropdown
+    async function loadAssetsDropdown() {
+        try {
+            const res = await fetch('/assets');
+            const data = await res.json();
+            const assets = data.assets || [];
+            const sel = document.getElementById('tx-asset');
+            sel.innerHTML = '<option value="">-- Select an Asset --</option>';
+            assets.forEach(a => {
+                sel.innerHTML += `<option value="${a.id}">${a.symbol} — ${a.name}</option>`;
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    const modal = document.getElementById('txModal');
+    function openModal() {
+        document.getElementById('tx-form').reset();
+        document.getElementById('tx-date').valueAsDate = new Date();
+        loadAssetsDropdown();
+        modal.style.display = 'flex';
+    }
+    function closeModal() { modal.style.display = 'none'; }
+
+    function calcTotal() {
+        const qty = parseFloat(document.getElementById('tx-qty').value) || 0;
+        const price = parseFloat(document.getElementById('tx-price').value) || 0;
+        document.getElementById('tx-total').value = (qty * price).toFixed(2);
+    }
+
+    async function saveTransaction(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.quantity = parseFloat(data.quantity);
+        data.price_per_unit = parseFloat(data.price_per_unit);
+        data.total = parseFloat(data.total);
+
+        try {
+            const res = await fetch('/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (res.ok) { closeModal(); loadTransactions(); }
+            else { alert(result.message || "Failed to save transaction."); }
+        } catch (err) { console.error(err); }
+    }
+
+    function exportCSV() {
+        if (transactionsData.length === 0) return alert("No data to export");
+        const headers = ["Date", "Type", "Asset Symbol", "Quantity", "Price/Unit", "Total", "Notes"];
+        const rows = transactionsData.map(tx => [
+            new Date(tx.date).toLocaleDateString(), tx.type, tx.asset_symbol, tx.quantity, tx.price_per_unit, tx.total, tx.notes || ""
+        ]);
+        let csv = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csv));
+        link.setAttribute("download", "fpms_transactions.csv");
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    window.addEventListener('DOMContentLoaded', loadTransactions);
+</script>
+{% endblock %}

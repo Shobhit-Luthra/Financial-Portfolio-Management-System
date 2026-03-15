@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}- Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard Overview</h1>
+    <div class="text-muted" id="date-display">Today</div>
+</div>
+
+<div class="kpi-grid">
+    <div class="card">
+        <h3 class="kpi-title">Total Portfolio Value</h3>
+        <div class="kpi-value" id="kpi-value">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Total P&L</h3>
+        <div class="kpi-value" id="kpi-pnl">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Total Invested</h3>
+        <div class="kpi-value" id="kpi-invested">--</div>
+    </div>
+    <div class="card">
+        <h3 class="kpi-title">Risk Score</h3>
+        <div class="kpi-value"><span id="kpi-score" style="color: var(--accent-color);">0.0</span> <span style="font-size: 1rem; color: var(--text-muted); font-family: var(--font-body); font-weight: normal;">/ 10</span></div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>Portfolio Performance</h3>
+            <select id="historyRange" class="form-control" style="width: auto; padding: 0.3rem;" onchange="loadHistoryChart()">
+                <option value="1W">1 Week</option>
+                <option value="1M" selected>1 Month</option>
+                <option value="3M">3 Months</option>
+                <option value="1Y">1 Year</option>
+            </select>
+        </div>
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <h3>Asset Allocation</h3>
+        <div class="chart-container" style="display: flex; justify-content: center;">
+            <canvas id="allocationChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Recent Transactions</h3>
+        <a href="/transactions_page" class="btn btn-outline" style="padding: 0.4rem 0.8rem;">View All</a>
+    </div>
+    <div style="overflow-x: auto;">
+        <table id="recent-transactions-table">
+            <thead>
+                <tr><th>Date</th><th>Type</th><th>Asset</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fmt = getCurrencyFormatter();
+    const sym = getCurrencySymbol();
+    document.getElementById('date-display').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    let historyChartInst = null;
+    let allocationChartInst = null;
+
+    async function loadDashboardData() {
+        try {
+            const sumRes = await fetch('/portfolio/summary');
+            if (sumRes.status === 401) return window.location.href = '/';
+            const summary = await sumRes.json();
+
+            document.getElementById('kpi-value').textContent = fmt.format(summary.total_value);
+            document.getElementById('kpi-invested').textContent = fmt.format(summary.total_invested);
+
+            const pnlEl = document.getElementById('kpi-pnl');
+            pnlEl.textContent = `${summary.today_pnl >= 0 ? '+' : ''}${fmt.format(summary.today_pnl)}`;
+            pnlEl.className = `kpi-value text-${summary.today_pnl >= 0 ? 'gain' : 'loss'}`;
+
+            document.getElementById('kpi-score').textContent = summary.risk_score.toFixed(1);
+
+            const allocRes = await fetch('/portfolio/allocation');
+            const allocation = await allocRes.json();
+            loadAllocationChart(allocation);
+            loadHistoryChart();
+
+            // Recent Transactions
+            const txRes = await fetch('/transactions');
+            const txData = await txRes.json();
+            const txs = (txData.transactions || []).slice(0, 5);
+            const tbody = document.querySelector('#recent-transactions-table tbody');
+            tbody.innerHTML = '';
+            if (txs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No recent transactions.</td></tr>';
+            } else {
+                txs.forEach(tx => {
+                    let typeColor = 'var(--accent-color)';
+                    if (tx.type === 'BUY' || tx.type === 'SIP') typeColor = 'var(--gain-color)';
+                    else if (tx.type === 'SELL') typeColor = 'var(--loss-color)';
+                    else if (tx.type === 'DIVIDEND') typeColor = 'var(--warning-color)';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(tx.date).toLocaleDateString()}</td>
+                        <td><span style="color: ${typeColor}; font-weight: 600; font-family: var(--font-body);">${tx.type}</span></td>
+                        <td style="font-weight: bold; font-family: var(--font-body);">${tx.asset_symbol}</td>
+                        <td>${tx.quantity}</td>
+                        <td>${fmt.format(tx.price_per_unit)}</td>
+                        <td>${fmt.format(tx.total)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        } catch (e) { console.error("Dashboard Load Error:", e); }
+    }
+
+    async function loadHistoryChart() {
+        const range = document.getElementById('historyRange').value;
+        const res = await fetch(`/portfolio/history?range=${range}`);
+        const data = await res.json();
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        if (historyChartInst) historyChartInst.destroy();
+        Chart.defaults.color = '#9499b0';
+        Chart.defaults.font.family = "'DM Mono', monospace";
+        historyChartInst = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => new Date(d.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})),
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: data.map(d => d.value),
+                    borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false, backgroundColor: '#141720', borderColor: '#2e3347', borderWidth: 1 }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { color: '#2e3347', borderDash: [5, 5] }, ticks: { callback: v => sym + v.toLocaleString() } }
+                }
+            }
+        });
+    }
+
+    function loadAllocationChart(data) {
+        const ctx = document.getElementById('allocationChart').getContext('2d');
+        if (allocationChartInst) allocationChartInst.destroy();
+        const bgColors = ['#6366f1', '#22c55e', '#f59e0b', '#f43f5e', '#8b5cf6'];
+        allocationChartInst = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(d => d.type),
+                datasets: [{ data: data.map(d => d.percentage), backgroundColor: bgColors, borderWidth: 0, hoverOffset: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '75%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, font: {family: "'Plus Jakarta Sans', sans-serif"} } },
+                    tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed.toFixed(1) + '%' } }
+                }
+            }
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPMS {% block title %}{% endblock %}</title>
+    <!-- Include the Google Fonts for Plus Jakarta Sans and DM Mono via style.css -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="FPMS Logo" style="height: 32px; border-radius: 4px;"> FPMS
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+                    <i class="ph ph-squares-four"></i> Dashboard
+                </a>
+                <a href="/assets_page" class="nav-item {% if request.path == '/assets_page' %}active{% endif %}">
+                    <i class="ph ph-briefcase"></i> Assets
+                </a>
+                <a href="/transactions_page" class="nav-item {% if request.path == '/transactions_page' %}active{% endif %}">
+                    <i class="ph ph-list-numbers"></i> Transactions
+                </a>
+                <a href="/risk" class="nav-item {% if request.path == '/risk' %}active{% endif %}">
+                    <i class="ph ph-shield-warning"></i> Risk Analysis
+                </a>
+                <a href="/performance_page" class="nav-item {% if request.path == '/performance_page' %}active{% endif %}">
+                    <i class="ph ph-trend-up"></i> Performance
+                </a>
+                <a href="/reports_page" class="nav-item {% if request.path == '/reports_page' %}active{% endif %}">
+                    <i class="ph ph-file-text"></i> Reports
+                </a>
+                <a href="/settings_page" class="nav-item {% if request.path == '/settings_page' %}active{% endif %}">
+                    <i class="ph ph-gear"></i> Settings
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-outline" style="width: 100%; justify-content: start;" onclick="handleLogout()">
+                    <i class="ph ph-sign-out"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Main JS file containing the API request wrappers -->
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

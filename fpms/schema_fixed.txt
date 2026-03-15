@@ -1,0 +1,38 @@
+Successfully connected to database.
+Tables: [{'Tables_in_finance': 'asset_sector'}, {'Tables_in_finance': 'assets'}, {'Tables_in_finance': 'sectors'}, {'Tables_in_finance': 'transactions'}, {'Tables_in_finance': 'users'}]
+
+Schema for asset_sector:
+  - asset_id: int
+  - sector_id: int
+
+Schema for assets:
+  - asset_id: int
+  - user_id: int
+  - symbol: varchar(30)
+  - name: varchar(200)
+  - type: enum('stock','bond','mutual_fund','other')
+  - quantity: decimal(14,4)
+  - avg_buy_price: decimal(12,2)
+  - current_price: decimal(12,2)
+
+Schema for sectors:
+  - sector_id: int
+  - name: varchar(100)
+
+Schema for transactions:
+  - transaction_id: int
+  - user_id: int
+  - asset_id: int
+  - type: enum('buy','sell','sip','dividend')
+  - quantity: decimal(14,4)
+  - price_per_unit: decimal(12,2)
+  - total_amount: decimal(16,2)
+  - transaction_date: date
+  - notes: text
+
+Schema for users:
+  - user_id: int
+  - name: varchar(100)
+  - email: varchar(150)
+  - password_hash: varchar(255)
+  - created_at: timestamp

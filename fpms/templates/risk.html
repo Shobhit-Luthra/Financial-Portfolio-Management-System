@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}- Risk Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Risk & Analytics</h1>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Left panel: Charts & Metrics -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;">Portfolio Metrics & Sector Exposure</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div>
+                <h4 class="text-muted" style="font-size: 0.875rem; text-transform: uppercase;">Key Risk Indicators</h4>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="metricsChart"></canvas>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-muted" style="font-size: 0.875rem; text-transform: uppercase;">Sector Exposure (%)</h4>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="sectorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right panel: Risk Score & Action -->
+    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 2rem;">
+        <h3 class="text-muted" style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.875rem; margin-bottom: 1rem;">Overall Risk Score</h3>
+        
+        <div style="position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 8px solid var(--border-color); margin-bottom: 2rem;">
+            <div style="font-size: 3.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary); z-index: 2;" id="risk-score-display">0.0</div>
+        </div>
+
+        <p id="risk-description" class="text-muted" style="margin-bottom: 2rem;">Analyzing portfolio risk...</p>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="loadRebalancing()">
+            <i class="ph ph-arrows-left-right"></i> Get Rebalancing Suggestions
+        </button>
+    </div>
+</div>
+
+<!-- Rebalancing Suggestions Panel -->
+<div class="card" id="rebalance-panel" style="display: none;">
+    <h3 style="margin-bottom: 1.5rem;"><i class="ph ph-scales"></i> Rebalancing Suggestions</h3>
+    <p class="text-muted" style="margin-bottom: 1rem;">Based on a moderate-risk ideal allocation: 50% Stocks, 25% Mutual Funds, 20% Bonds, 5% Other.</p>
+    <div style="overflow-x: auto;">
+        <table id="rebalance-table">
+            <thead>
+                <tr>
+                    <th>Asset Type</th>
+                    <th>Current %</th>
+                    <th>Ideal %</th>
+                    <th>Difference</th>
+                    <th>Action</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fmt = getCurrencyFormatter();
+
+    async function loadRiskAnalytics() {
+        try {
+            const res = await fetch('/analytics/risk');
+            if (res.status === 401) window.location.href = '/';
+            const data = await res.json();
+            updateRiskScore(data.risk_score);
+            renderMetricsChart(data);
+            renderSectorChart(data.sector_exposure);
+        } catch (e) { console.error("Error loading risk analytics:", e); }
+    }
+
+    function updateRiskScore(score) {
+        const el = document.getElementById('risk-score-display');
+        el.textContent = score.toFixed(1);
+        const desc = document.getElementById('risk-description');
+        if (score < 4) {
+            desc.textContent = "Conservative profile — optimized for steady, low-volatility returns.";
+            el.style.color = "var(--gain-color)";
+        } else if (score < 7) {
+            desc.textContent = "Balanced profile — mix of growth potential and stability.";
+            el.style.color = "var(--warning-color)";
+        } else {
+            desc.textContent = "Aggressive profile — high growth potential but significant volatility.";
+            el.style.color = "var(--loss-color)";
+        }
+    }
+
+    function renderMetricsChart(data) {
+        const ctx = document.getElementById('metricsChart').getContext('2d');
+        Chart.defaults.color = '#9499b0';
+        Chart.defaults.font.family = "'DM Mono', monospace";
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Beta', 'Sharpe', 'Volatility %', 'Max Drawdown %', 'VaR 95%'],
+                datasets: [{
+                    data: [data.beta, data.sharpe_ratio, data.volatility, data.max_drawdown, data.var_95],
+                    backgroundColor: ['rgba(99,102,241,0.8)', 'rgba(34,197,94,0.8)', 'rgba(245,158,11,0.8)', 'rgba(244,63,94,0.8)', 'rgba(244,63,94,0.8)'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { color: '#2e3347', borderDash: [5,5] } }, y: { grid: { display: false } } }
+            }
+        });
+    }
+
+    function renderSectorChart(sectors) {
+        const ctx = document.getElementById('sectorChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sectors.map(s => s.sector),
+                datasets: [{ data: sectors.map(s => s.percentage), backgroundColor: 'rgba(99,102,241,0.2)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 }]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { color: '#2e3347', borderDash: [5,5] }, max: 100 }, y: { grid: { display: false } } }
+            }
+        });
+    }
+
+    // Functional Rebalancing
+    async function loadRebalancing() {
+        try {
+            const res = await fetch('/analytics/rebalance');
+            const data = await res.json();
+            const panel = document.getElementById('rebalance-panel');
+            panel.style.display = 'block';
+
+            const tbody = document.querySelector('#rebalance-table tbody');
+            tbody.innerHTML = '';
+
+            if (!data.suggestions || data.suggestions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;">No suggestions available. Add assets first.</td></tr>';
+                return;
+            }
+
+            data.suggestions.forEach(s => {
+                let statusColor = 'var(--accent-color)';
+                let statusBg = 'rgba(99,102,241,0.15)';
+                if (s.status === 'underweight') { statusColor = 'var(--gain-color)'; statusBg = 'rgba(34,197,94,0.15)'; }
+                else if (s.status === 'overweight') { statusColor = 'var(--loss-color)'; statusBg = 'rgba(244,63,94,0.15)'; }
+
+                const diffClass = s.diff_pct > 0 ? 'text-gain' : (s.diff_pct < 0 ? 'text-loss' : 'text-muted');
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight:bold;">${s.asset_type}</td>
+                    <td>${s.current_pct}%</td>
+                    <td>${s.ideal_pct}%</td>
+                    <td class="${diffClass}">${s.diff_pct > 0 ? '+' : ''}${s.diff_pct}%</td>
+                    <td><span style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${statusBg}; color: ${statusColor};">${s.action}</span></td>
+                    <td class="text-muted" style="font-size: 0.85rem;">${s.description}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch(e) { console.error(e); alert('Failed to load rebalancing suggestions.'); }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadRiskAnalytics);
+</script>
+{% endblock %}

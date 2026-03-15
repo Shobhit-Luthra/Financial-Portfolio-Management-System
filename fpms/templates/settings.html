@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}- Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Account Settings</h1>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 800px;">
+
+    <!-- Profile Settings Card -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Profile Information</h3>
+        <form id="profile-form" onsubmit="event.preventDefault(); alert('Profile saved!');">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="settings-name" name="name" placeholder="Your Name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="settings-email" name="email" placeholder="name@example.com" readonly style="opacity: 0.6;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Currency Preference</label>
+                <select class="form-control" id="currency-select" style="width: 50%;" onchange="onCurrencyChange()">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="INR">INR (₹)</option>
+                </select>
+                <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem;">
+                    <i class="ph ph-info"></i> Changing currency will reload all pages and convert all values using fixed exchange rates.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Changes</button>
+        </form>
+    </div>
+
+    <!-- Security Card -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Security</h3>
+        <form onsubmit="event.preventDefault(); alert('Password updated!');">
+            <div class="form-group" style="max-width: 50%;">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-control" placeholder="••••••••">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-control" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-control" placeholder="••••••••">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-outline" style="margin-top: 1rem;">Update Password</button>
+        </form>
+    </div>
+
+    <!-- Danger Zone Card -->
+    <div class="card" style="border-color: rgba(244, 63, 94, 0.3);">
+        <h3 class="text-loss" style="margin-bottom: 1.5rem;">Danger Zone</h3>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Once you delete your account, there is no going back.</p>
+        <button class="btn btn-outline" style="color: var(--loss-color); border-color: rgba(244, 63, 94, 0.4);" onclick="if(confirm('Are you absolutely sure?')) alert('Account deletion initiated.');">
+            Delete Account
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadProfile() {
+        try {
+            const res = await fetch('/auth/profile');
+            if (res.ok) {
+                const user = await res.json();
+                document.getElementById('settings-name').value = user.name || '';
+                document.getElementById('settings-email').value = user.email || '';
+            }
+        } catch(e) { console.error(e); }
+
+        // Set saved currency
+        const saved = getStoredCurrency();
+        document.getElementById('currency-select').value = saved;
+    }
+
+    function onCurrencyChange() {
+        const val = document.getElementById('currency-select').value;
+        setCurrencyPreference(val); // this sets cookie and reloads the page
+    }
+
+    window.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+{% endblock %}
