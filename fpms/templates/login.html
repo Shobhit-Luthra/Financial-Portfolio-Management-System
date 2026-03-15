@@ -5,25 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FPMS - Login / Register</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Load phosphor icons for premium look -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="auth-wrapper">
 
-    <div class="card auth-card">
+    <div class="auth-card" style="animation: fadeInUp 0.5s ease-out;">
         <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
-                <i class="ph ph-chart-polar accent" style="color: var(--accent-color);"></i> FPMS
-            </div>
-            <p class="text-muted" style="margin-top: 0.5rem;">Financial Portfolio Management System</p>
+            <img src="{{ url_for('static', filename='logo_login.png') }}" alt="FPMS Logo" style="height: 64px; width: 64px; border-radius: 14px; object-fit: cover; margin-bottom: 1rem; box-shadow: 0 4px 20px rgba(14,164,122,0.2);">
+            <h2 style="margin-bottom: 0.25rem; font-size: 1.5rem;">Welcome to FPMS</h2>
+            <p class="text-muted" style="font-size: 0.875rem;">Financial Portfolio Management System</p>
         </div>
 
         <div class="auth-tabs">
-            <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</div>
-            <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</div>
+            <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+            <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</div>
         </div>
 
-        <div id="alert-container" style="color: var(--loss-color); text-align: center; margin-bottom: 1rem; font-size: 0.875rem; display: none;"></div>
+        <div id="alert-container" style="color: var(--loss-color); text-align: center; margin-bottom: 1rem; font-size: 0.85rem; display: none; padding: 0.75rem; border-radius: 8px; background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.15);"></div>
 
         <!-- Login Form -->
         <form id="form-login" onsubmit="handleAuth(event, 'login')">
@@ -35,9 +33,40 @@
                 <label class="form-label">Password</label>
                 <input type="password" name="password" class="form-control" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem;">
                 Sign In <i class="ph ph-arrow-right"></i>
             </button>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--accent-color); font-size: 0.85rem; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Forgot Password?</a>
+            </div>
+        </form>
+
+        <!-- Forgot Password Form -->
+        <form id="form-forgot" style="display: none;" onsubmit="handleResetPassword(event)">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
+                <div style="width: 32px; height: 32px; background: rgba(14,164,122,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <i class="ph ph-lock-key" style="color: var(--accent-color);"></i>
+                </div>
+                <p class="text-muted" style="font-size: 0.85rem; margin: 0;">Enter your email and set a new password.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" name="new_password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" name="confirm_password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem;">
+                Reset Password <i class="ph ph-lock-key"></i>
+            </button>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="#" onclick="switchTab('login'); return false;" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;"><i class="ph ph-arrow-left"></i> Back to Sign In</a>
+            </div>
         </form>
 
         <!-- Register Form -->
@@ -54,10 +83,14 @@
                 <label class="form-label">Password</label>
                 <input type="password" name="password" class="form-control" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem;">
                 Create Account <i class="ph ph-user-plus"></i>
             </button>
         </form>
+        
+        <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+            <p class="text-muted" style="font-size: 0.75rem;">Secured with JWT • AES-256 encryption</p>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='main.js') }}"></script>
@@ -67,10 +100,63 @@
             document.getElementById('tab-register').classList.remove('active');
             document.getElementById('form-login').style.display = 'none';
             document.getElementById('form-register').style.display = 'none';
+            document.getElementById('form-forgot').style.display = 'none';
             
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            document.getElementById(`form-${tab}`).style.display = 'block';
+            if (tab === 'forgot') {
+                document.getElementById('form-forgot').style.display = 'block';
+            } else {
+                document.getElementById(`tab-${tab}`).classList.add('active');
+                document.getElementById(`form-${tab}`).style.display = 'block';
+            }
             document.getElementById('alert-container').style.display = 'none';
+        }
+
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            const form = e.target;
+            const email = form.email.value;
+            const newPw = form.new_password.value;
+            const confirmPw = form.confirm_password.value;
+            const alertBox = document.getElementById('alert-container');
+
+            if (newPw !== confirmPw) {
+                alertBox.textContent = 'Passwords do not match.';
+                alertBox.style.display = 'block';
+                alertBox.style.color = 'var(--loss-color)';
+                alertBox.style.background = 'rgba(244,63,94,0.08)';
+                alertBox.style.borderColor = 'rgba(244,63,94,0.15)';
+                return;
+            }
+            if (newPw.length < 6) {
+                alertBox.textContent = 'Password must be at least 6 characters.';
+                alertBox.style.display = 'block';
+                alertBox.style.color = 'var(--loss-color)';
+                return;
+            }
+            try {
+                const res = await fetch('/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, new_password: newPw })
+                });
+                const data = await res.json();
+                alertBox.textContent = data.message;
+                alertBox.style.display = 'block';
+                if (res.ok) {
+                    alertBox.style.color = 'var(--gain-color)';
+                    alertBox.style.background = 'rgba(34,197,94,0.08)';
+                    alertBox.style.borderColor = 'rgba(34,197,94,0.15)';
+                    setTimeout(() => switchTab('login'), 2000);
+                } else {
+                    alertBox.style.color = 'var(--loss-color)';
+                    alertBox.style.background = 'rgba(244,63,94,0.08)';
+                    alertBox.style.borderColor = 'rgba(244,63,94,0.15)';
+                }
+            } catch(err) {
+                alertBox.textContent = 'Network error. Try again.';
+                alertBox.style.display = 'block';
+                alertBox.style.color = 'var(--loss-color)';
+            }
         }
     </script>
 </body>

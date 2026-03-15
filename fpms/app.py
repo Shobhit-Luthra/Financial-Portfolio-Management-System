@@ -119,6 +119,22 @@ def logout():
     resp.set_cookie('token', '', expires=0)
     return resp
 
+@app.route('/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    email = (data.get('email') or '').strip()
+    new_password = data.get('new_password', '')
+    if not email or not new_password:
+        return jsonify({'message': 'Email and new password are required.'}), 400
+    if len(new_password) < 6:
+        return jsonify({'message': 'Password must be at least 6 characters.'}), 400
+    user = db.execute_query("SELECT user_id FROM users WHERE email = %s", (email,), fetch=True, fetchall=False)
+    if not user:
+        return jsonify({'message': 'No account found with that email.'}), 404
+    hashed = generate_password_hash(new_password, method='pbkdf2:sha256')
+    db.execute_query("UPDATE users SET password_hash = %s WHERE user_id = %s", (hashed, user['user_id']))
+    return jsonify({'message': 'Password reset successfully! You can now log in.'})
+
 @app.route('/auth/profile', methods=['GET'])
 @token_required
 def get_profile(current_user_id):

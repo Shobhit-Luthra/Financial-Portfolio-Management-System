@@ -28,67 +28,70 @@
 </div>
 
 <!-- Report Output Area -->
-<div class="card" id="report-output" style="display: none;">
+<div id="report-output" style="display: none;">
+
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h3 id="report-title">Report</h3>
+        <h3 id="report-title" style="margin-bottom: 0;">Report</h3>
         <span class="badge badge-stock" id="report-currency-badge">USD</span>
     </div>
-    
-    <!-- Summary KPIs -->
-    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Total Invested</h3>
-            <div class="kpi-value" id="rpt-invested">--</div>
+
+    <!-- Summary KPIs — 3 columns x 2 rows, no nested .card -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Total Invested</div>
+            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-invested">--</div>
         </div>
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Current Value</h3>
-            <div class="kpi-value" id="rpt-value">--</div>
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Current Value</div>
+            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-value">--</div>
         </div>
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Total P&L</h3>
-            <div class="kpi-value" id="rpt-pnl">--</div>
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Total P&L</div>
+            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-pnl">--</div>
         </div>
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Capital Gains</h3>
-            <div class="kpi-value text-gain" id="rpt-gains">--</div>
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Capital Gains</div>
+            <div class="text-gain" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-gains">--</div>
         </div>
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Capital Losses</h3>
-            <div class="kpi-value text-loss" id="rpt-losses">--</div>
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Capital Losses</div>
+            <div class="text-loss" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-losses">--</div>
         </div>
-        <div class="card" style="background: var(--bg-color);">
-            <h3 class="kpi-title">Net Taxable</h3>
-            <div class="kpi-value text-warning" id="rpt-net">--</div>
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Net Taxable</div>
+            <div class="text-warning" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);" id="rpt-net">--</div>
         </div>
     </div>
 
     <!-- Asset Breakdown Table -->
-    <h3 style="margin-bottom: 1rem;">Asset Breakdown</h3>
-    <div style="overflow-x: auto;">
-        <table id="report-table">
-            <thead>
-                <tr>
-                    <th>Symbol</th><th>Name</th><th>Type</th>
-                    <th>Invested</th><th>Current Value</th><th>P&L</th><th>Return %</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1rem;">Asset Breakdown</h3>
+        <div style="overflow-x: auto;">
+            <table id="report-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th><th>Name</th><th>Type</th>
+                        <th>Invested</th><th>Current Value</th><th>P&L</th><th>Return %</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Transaction Summary -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem;">
-        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
-            <span class="text-muted">Total Buys</span>
-            <div class="text-gain" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-buys">--</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div style="padding: 1.25rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; text-align: center;">
+            <span class="text-muted" style="font-size: 0.8rem; text-transform: uppercase;">Total Buys</span>
+            <div class="text-gain" style="font-size: 1.3rem; font-family: var(--font-mono); font-weight: 700; margin-top: 0.5rem;" id="rpt-buys">--</div>
         </div>
-        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
-            <span class="text-muted">Total Sells</span>
-            <div class="text-loss" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-sells">--</div>
+        <div style="padding: 1.25rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; text-align: center;">
+            <span class="text-muted" style="font-size: 0.8rem; text-transform: uppercase;">Total Sells</span>
+            <div class="text-loss" style="font-size: 1.3rem; font-family: var(--font-mono); font-weight: 700; margin-top: 0.5rem;" id="rpt-sells">--</div>
         </div>
-        <div style="padding: 1rem; background: var(--bg-color); border-radius: 8px; text-align: center;">
-            <span class="text-muted">Dividends Earned</span>
-            <div class="text-warning" style="font-size: 1.2rem; font-family: var(--font-mono); margin-top: 0.25rem;" id="rpt-divs">--</div>
+        <div style="padding: 1.25rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; text-align: center;">
+            <span class="text-muted" style="font-size: 0.8rem; text-transform: uppercase;">Dividends Earned</span>
+            <div class="text-warning" style="font-size: 1.3rem; font-family: var(--font-mono); font-weight: 700; margin-top: 0.5rem;" id="rpt-divs">--</div>
         </div>
     </div>
 </div>
@@ -124,7 +127,8 @@
         
         const pnlEl = document.getElementById('rpt-pnl');
         pnlEl.textContent = `${reportData.total_pnl >= 0 ? '+' : ''}${fmt.format(reportData.total_pnl)}`;
-        pnlEl.className = `kpi-value text-${reportData.total_pnl >= 0 ? 'gain' : 'loss'}`;
+        pnlEl.className = `text-${reportData.total_pnl >= 0 ? 'gain' : 'loss'}`;
+        pnlEl.style.cssText = 'font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);';
         
         document.getElementById('rpt-gains').textContent = `+${fmt.format(reportData.capital_gains)}`;
         document.getElementById('rpt-losses').textContent = fmt.format(reportData.capital_losses);
@@ -136,7 +140,11 @@
         // Asset table
         const tbody = document.querySelector('#report-table tbody');
         tbody.innerHTML = '';
-        (reportData.asset_details || []).forEach(a => {
+        if (!reportData.asset_details || reportData.asset_details.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No assets to display.</td></tr>';
+            return;
+        }
+        reportData.asset_details.forEach(a => {
             const pnlClass = a.pnl >= 0 ? 'text-gain' : 'text-loss';
             const row = document.createElement('tr');
             row.innerHTML = `

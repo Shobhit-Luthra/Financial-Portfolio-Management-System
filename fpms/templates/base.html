@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FPMS {% block title %}{% endblock %}</title>
-    <!-- Include the Google Fonts for Plus Jakarta Sans and DM Mono via style.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,19 +14,27 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="FPMS Logo" style="height: 32px; border-radius: 4px;"> FPMS
+                <img src="{{ url_for('static', filename='logo_icon.png') }}" alt="FPMS Logo" style="height: 38px; width: 38px; border-radius: 8px; object-fit: cover;">
+                <span>FPMS</span>
+            </div>
+            
+            <div style="padding: 0.75rem 1rem;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 0 0.5rem; margin-bottom: 0.25rem;">Main Menu</div>
             </div>
             
             <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+                <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' or request.path == '/' %}active{% endif %}">
                     <i class="ph ph-squares-four"></i> Dashboard
                 </a>
                 <a href="/assets_page" class="nav-item {% if request.path == '/assets_page' %}active{% endif %}">
-                    <i class="ph ph-briefcase"></i> Assets
+                    <i class="ph ph-briefcase"></i> Portfolio
                 </a>
                 <a href="/transactions_page" class="nav-item {% if request.path == '/transactions_page' %}active{% endif %}">
                     <i class="ph ph-list-numbers"></i> Transactions
                 </a>
+                
+                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 0.75rem 0.5rem 0.25rem;">Analytics</div>
+                
                 <a href="/risk" class="nav-item {% if request.path == '/risk' %}active{% endif %}">
                     <i class="ph ph-shield-warning"></i> Risk Analysis
                 </a>
@@ -37,14 +44,17 @@
                 <a href="/reports_page" class="nav-item {% if request.path == '/reports_page' %}active{% endif %}">
                     <i class="ph ph-file-text"></i> Reports
                 </a>
+                
+                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 0.75rem 0.5rem 0.25rem;">Account</div>
+                
                 <a href="/settings_page" class="nav-item {% if request.path == '/settings_page' %}active{% endif %}">
                     <i class="ph ph-gear"></i> Settings
                 </a>
             </nav>
 
             <div class="sidebar-footer">
-                <button class="btn btn-outline" style="width: 100%; justify-content: start;" onclick="handleLogout()">
-                    <i class="ph ph-sign-out"></i> Logout
+                <button class="btn btn-outline" style="width: 100%; justify-content: center; gap: 0.5rem; font-size: 0.85rem;" onclick="handleLogout()">
+                    <i class="ph ph-sign-out"></i> Sign Out
                 </button>
             </div>
         </aside>
@@ -55,7 +65,6 @@
         </main>
     </div>
 
-    <!-- Main JS file containing the API request wrappers -->
     <script src="{{ url_for('static', filename='main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
